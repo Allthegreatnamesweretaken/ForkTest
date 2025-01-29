@@ -1,0 +1,73 @@
+name dog.obj
+texture LPdog.dds
+position 0.0 10.0 0.0
+
+name skysphere.obj
+texture Skymap.dds
+
+
+name cube.obj
+texture Skymap.dds
+
+name car.obj
+texture stone.dds
+position 20.0 2.2 0.0
+
+name cube2t.obj
+texture rocks.dds
+position 0.0 4.0 0.0
+
+name cube2t.obj
+texture rocks.dds
+position 4.0 3.0 0.0
+
+name mountain.obj
+texture Mountain.dds
+position 0.0 -10.0 65.0
+
+name wallCube.obj
+texture stone.dds
+position 15.6 -2.8 0.0
+
+name wallCube.obj
+texture stone.dds
+position -11.75 4.2 0.0
+
+name road.obj
+texture Road.dds
+position 22.0 0.0 0.0
+
+name road.obj
+texture Road.dds
+position -18.0 7.0 0.0
+
+name road.obj
+texture Road.dds
+position 0.0 -3.0 0.0
+
+name BuildingTwo.obj
+texture BuildingTwo.dds
+position 6.5 -1.0 6.5
+
+
+name BuildingOne.obj
+texture BuildingOne.dds
+position 0.0 -3.0 9.0
+
+name DirtLand.obj
+texture ground.dds
+position 22.0 1.5 -12.0
+
+name DirtLand.obj
+texture ground.dds
+position -18.0 8.5 -12.0
+
+name DirtLand.obj
+texture ground.dds
+position 0.0 -1.0 -12.0
+
+
+
+
+player_position 1.0 1.0 0.0
+light_direction -0.577 0.577 -0.577

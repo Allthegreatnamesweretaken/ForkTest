@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <FxCompile Include="Simulation.fx" />
+    <FxCompile Include="Simulation_PS.hlsl" />
+    <FxCompile Include="Simulation_VS.hlsl" />
+    <FxCompile Include="Sky.fx" />
+    <FxCompile Include="Enviroment.fx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="D3DFramework.cpp" />
+    <ClCompile Include="DDSTextureLoader.cpp" />
+    <ClCompile Include="Simulation.cpp" />
+    <ClCompile Include="imgui.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_dx11.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_win32.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_stdlib.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_tables.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>Storage</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelLoader.h" />
+    <ClCompile Include="ModelLoader.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D3DFramework.h" />
+    <ClInclude Include="DDSTextureLoader.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="imconfig.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_dx11.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_win32.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_stdlib.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>Storage</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjModel.h" />
+    <ClInclude Include="TextureManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Simulation.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Simulation.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Storage">
+      <UniqueIdentifier>{354743ad-c36e-4f73-9291-2403e7ce397d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="imgui.natstepfilter">
+      <Filter>Storage</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="imgui.natvis">
+      <Filter>Storage</Filter>
+    </Natvis>
+  </ItemGroup>
+</Project>
