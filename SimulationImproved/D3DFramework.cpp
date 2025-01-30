@@ -15,8 +15,15 @@
 #include "directxcollision.h"
 //Can be final but want scene changes first.
 
-std::unique_ptr<D3DFramework> D3DFramework::_instance = std::make_unique<D3DFramework>();
+/*Need to Do list:
+- Need to think more about how the game will work, while the baseline is okay need more idea on it like multiple guns? More maps? Enemines? and general feeling for the game.
+-Add in a way to let the player have in air controls to make teh movement while falling feel smoother, can also change gravity if needed as it right now is strange.
+- change the wya the shaders are loaded should be able to be done in a loop.
+- Change the way they are added to an object should be able to do that inside of where we create the object.
+*/
 
+std::unique_ptr<D3DFramework> D3DFramework::_instance = std::make_unique<D3DFramework>();
+//Config can stay as a way of loading objects can be changed later on though if can think of better method. Also see if Objects can be laoded that aren't an obj / are more efficient.
 bool D3DFramework::LoadConfig(const std::string& pathname) {
 	std::ifstream fin(pathname);
 	if (!fin) {
@@ -57,7 +64,16 @@ bool D3DFramework::LoadConfig(const std::string& pathname) {
 	}
 	return true;
 }
+void D3DFramework::lockCursor() {
+	RECT rect;
+	GetClientRect(_hWnd, &rect);
+	MapWindowPoints(_hWnd, nullptr, reinterpret_cast<POINT*>(&rect), 2);
+	ClipCursor(&rect);
+}
 
+void D3DFramework::releaseCursor() {
+	ClipCursor(nullptr);
+}
 //--------------------------------------------------------------------------------------
 // Called every time the application receives a message
 //--------------------------------------------------------------------------------------
@@ -83,43 +99,83 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 		PostQuitMessage(0);
 		break;
 
-	case WM_KEYDOWN:
-		
-		switch (wParam) {
-		case 'A':
-			msg == "A pressed";
-			OutputDebugStringA("A pressed\n");
-			app._firstObjectHorizontalVelocity = -app._moveSpeed; // Move left
-			app._firstObjectLookDirection = XMFLOAT3(-1.0f, 0.0f, 0.0f); // Look left
-			break;
-		case 'D':
-			msg == "D pressed";
-			OutputDebugStringA("D pressed\n");
-			app._firstObjectHorizontalVelocity = app._moveSpeed; // Move right
-			app._firstObjectLookDirection = XMFLOAT3(1.0f, 0.0f, 0.0f); // Look right
+	case WM_MOUSEMOVE:
+		if (!app._mouseCaptured) {
+			// Get the current mouse position
+			POINT currentMousePos;
+			GetCursorPos(&currentMousePos);
 
-			break;
+			// Calculate the mouse movement delta
+			float deltaX = static_cast<float>(currentMousePos.x - app._lastMousePos.x);
+			float deltaY = static_cast<float>(currentMousePos.y - app._lastMousePos.y);
+
+			// Update the camera yaw and pitch based on the mouse movement delta
+			app._cameraYaw += deltaX * 0.002f; // Adjust sensitivity as needed
+			app._cameraPitch += -deltaY * 0.002f;
+			app._cameraPitch = std::clamp(app._cameraPitch, -XM_PIDIV2, XM_PIDIV2); // Limit pitch to avoid flipping
+
+			// Recenter the cursor to the middle of the window
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			POINT center = { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 };
+			ClientToScreen(hWnd, &center);
+			SetCursorPos(center.x, center.y);
+
+			// Update the last mouse position to the center
+			app._lastMousePos = center;
+		}
+		break;
+
+	case WM_LBUTTONDOWN:
+	{
+		// Calculate the look direction based on yaw and pitch
+		XMVECTOR lookDirection = XMVector3Normalize(XMVectorSet(
+			cosf(app._cameraPitch) * sinf(app._cameraYaw),
+			sinf(app._cameraPitch),
+			cosf(app._cameraPitch) * cosf(app._cameraYaw),
+			0.0f
+		));
+
+		// Apply force in the opposite direction
+		app._firstObjectHorizontalVelocity = -XMVectorGetX(lookDirection) * 20;
+		app._firstObjectHorizontalVelocityZ = -XMVectorGetZ(lookDirection) * 20;
+		app._firstObjectVerticalVelocity = -XMVectorGetY(lookDirection) * 20;
+	}
+	break;
+
+	case WM_KEYDOWN:
+	{
+		XMVECTOR lookDirection = XMVector3Normalize(XMVectorSet(
+			cosf(app._cameraPitch) * sinf(app._cameraYaw),
+			sinf(app._cameraPitch),
+			cosf(app._cameraPitch) * cosf(app._cameraYaw),
+			0.0f
+		));
+
+		XMVECTOR rightDirection = XMVector3Normalize(XMVectorSet(
+			sinf(app._cameraYaw - XM_PIDIV2),
+			0.0f,
+			cosf(app._cameraYaw - XM_PIDIV2),
+			0.0f
+		));
+
+		switch (wParam) {
 		case 'W':
-			msg == "W pressed";
-			OutputDebugStringA("W pressed\n");
-			app._lookAboveObject = true; // Look above the object
-			app.updateViewMatrix(); // Update the view matrix
+			app._firstObjectHorizontalVelocityZ = XMVectorGetZ(lookDirection) * app._moveSpeed;
+			app._firstObjectHorizontalVelocity = XMVectorGetX(lookDirection) * app._moveSpeed;
 			break;
 		case 'S':
-			msg == "S pressed";
-			OutputDebugStringA("S pressed\n");
-			app._lookBelowObject = true; // Look above the object
-			app.updateViewMatrix(); // Update the view matrix
+			app._firstObjectHorizontalVelocityZ = -XMVectorGetZ(lookDirection) * app._moveSpeed;
+			app._firstObjectHorizontalVelocity = -XMVectorGetX(lookDirection) * app._moveSpeed;
 			break;
-		case VK_SPACE:
-			msg == "Space pressed";
-			OutputDebugStringA("Space pressed\n");
-			if (app._isOnSurface) { // Only jump if on a surface
-				app._firstObjectVerticalVelocity = app._jumpVelocity; // Initial jump velocity
-				app._isOnSurface = false; // Player is no longer on a surface after jumping
-			}
+		case 'A':
+			app._firstObjectHorizontalVelocity = XMVectorGetX(rightDirection) * app._moveSpeed;
+			app._firstObjectHorizontalVelocityZ = XMVectorGetZ(rightDirection) * app._moveSpeed;
 			break;
-
+		case 'D':
+			app._firstObjectHorizontalVelocity = -XMVectorGetX(rightDirection) * app._moveSpeed;
+			app._firstObjectHorizontalVelocityZ = -XMVectorGetZ(rightDirection) * app._moveSpeed;
+			break;
 		case VK_ESCAPE:
 			msg == "ESC pressed";
 			OutputDebugStringA("ESC pressed\n");
@@ -167,29 +223,22 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 	case WM_KEYUP:
 		switch (wParam) {
 		case 'A':
-			msg == "A released";
-			OutputDebugStringA("A released\n");
-			if (app._firstObjectHorizontalVelocity < 0) {
+			if (app._firstObjectHorizontalVelocity > 0) {
 				app._firstObjectHorizontalVelocity = 0.0f; // Stop moving left
 			}
+		case 'W':
+			if (app._firstObjectHorizontalVelocityZ < 0) {
+				app._firstObjectHorizontalVelocityZ = 0.0f; // Stop moving left
+			}
 		case 'D':
-			msg == "D released";
-			OutputDebugStringA("D released\n");
-			if (app._firstObjectHorizontalVelocity > 0) {
+			if (app._firstObjectHorizontalVelocity < 0) {
 				app._firstObjectHorizontalVelocity = 0.0f; // Stop moving right
 			}
-		case 'W':
-			msg == "W released";
-			OutputDebugStringA("W released\n");
-			app._lookAboveObject = false; // Stop looking above the object
-			app.updateViewMatrix(); // Update the view matrix
-			break;
 		case 'S':
-			msg == "S released";
-			OutputDebugStringA("S released\n");
-			app._lookBelowObject = false; // Stop looking above the object
-			app.updateViewMatrix(); // Update the view matrix
-			break;
+			if (app._firstObjectHorizontalVelocityZ > 0) {
+				app._firstObjectHorizontalVelocityZ = 0.0f; // Stop moving left
+			}
+		
 		default:
 			break;
 		}
@@ -200,14 +249,15 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 
 	return 0;
 }
+}
 
 void D3DFramework::reset() {
 	// Reset the application to its initial state / This is not resetting the game as a whole, just the player.
 	_firstObjectPosition = { 0.0f, 0.0, 0.0f };
 	_firstObjectHorizontalVelocity = 0.0f;
 	_firstObjectVerticalVelocity = 0.0f;
-	_lookAboveObject = false;
-	_lookBelowObject = false;
+	/*_lookAboveObject = false;
+	_lookBelowObject = false;*/
 	_timeFactor = 1.0f; // Reset the time factor
 	updateViewMatrix();
 }
@@ -244,23 +294,51 @@ void D3DFramework::adjustTimeFactor(float adjustment) {
 	// Adjust the time factor
 	_timeFactor = std::clamp(_timeFactor + adjustment, 0.1f, 10.0f);
 }
-
-
+//void D3DFramework::processMouseInput(float deltaTime) {
+//	if (_mouseCaptured) {
+//		// Calculate the new look direction
+//		XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(_cameraPitch, _cameraYaw, 0.0f);
+//		XMVECTOR lookDirection = XMVector3TransformCoord(XMLoadFloat3(&_firstObjectLookDirection), rotationMatrix);
+//		XMStoreFloat3(&_firstObjectLookDirection, lookDirection);
+//	}
+//}
 void D3DFramework::updateViewMatrix() {
-	// Set the camera position to the player's position
-	_cameraPosition = _firstObjectPosition;
+	// Calculate the look direction based on yaw and pitch
+	  // Offset the camera position relative to the player's position
+	XMFLOAT3 cameraOffset = XMFLOAT3(1.0f, 1.0f, 0.0f); // Adjust the offset as needed
+	XMVECTOR offset = XMLoadFloat3(&cameraOffset);
+	XMVECTOR playerPosition = XMLoadFloat3(&_firstObjectPosition);
+	XMVECTOR cameraPosition = XMVectorAdd(playerPosition, offset);
+	XMStoreFloat3(&_cameraPosition, cameraPosition);
 
-	// Calculate the look-at position based on the player's look direction
-	XMFLOAT3 lookAtPosition = {
-		_firstObjectPosition.x + _firstObjectLookDirection.x,
-		_firstObjectPosition.y + _firstObjectLookDirection.y,
-		_firstObjectPosition.z + _firstObjectLookDirection.z
-	};
+
+
+	// Calculate the look direction based on the player's look direction
+	XMVECTOR lookDirection = XMVector3Normalize(XMVectorSet(
+		cosf(_cameraPitch) * sinf(_cameraYaw),
+		sinf(_cameraPitch),
+		cosf(_cameraPitch) * cosf(_cameraYaw),
+		0.0f
+	));
+
+	// Calculate the right direction
+	XMVECTOR rightDirection = XMVector3Normalize(XMVectorSet(
+		sinf(_cameraYaw - XM_PIDIV2),
+		0.0f,
+		cosf(_cameraYaw - XM_PIDIV2),
+		0.0f
+	));
+
+	// Calculate the up direction
+	XMVECTOR upDirection = XMVector3Cross(rightDirection, lookDirection);
+
+	// Calculate the look-at position
+	XMVECTOR lookAtPosition = XMVectorAdd(XMLoadFloat3(&_cameraPosition), lookDirection);
 
 	// Use the camera position directly
 	const XMVECTOR Eye = XMLoadFloat3(&_cameraPosition);
-	const XMVECTOR At = XMLoadFloat3(&lookAtPosition);
-	const XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	const XMVECTOR At = lookAtPosition;
+	const XMVECTOR Up = upDirection;
 
 	_View = XMMatrixLookAtLH(Eye, At, Up);
 
@@ -269,9 +347,10 @@ void D3DFramework::updateViewMatrix() {
 	cb.mWorld = XMMatrixTranspose(_World);
 	cb.mView = XMMatrixTranspose(_View);
 	cb.mProjection = XMMatrixTranspose(_Projection);
-	cb.eyePos = XMLoadFloat3(&_cameraPosition);
+	cb.eyePos = Eye;
 	_pImmediateContext->UpdateSubresource(_pConstantBuffer, 0, nullptr, &cb, 0, 0);
-}
+	}
+
 
 //--------------------------------------------------------------------------------------
 // Register class and create window
@@ -485,6 +564,7 @@ HRESULT D3DFramework::initDevice()
 
 #ifdef COMPILE_CSO
 	//This can 100% be made more efficient or it can be changed to be loaded in from the config so it loops.
+	// Need to do this soon will make the code look simplier and easier to read.
 	// Compile the vertex shader
 	CComPtr <ID3DBlob> pVSBlob;
 	hr = compileShaderFromFile(L"Simulation.fx", "VS", "vs_5_0", &pVSBlob);
@@ -848,6 +928,9 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 	// Update the object's horizontal position
 	_firstObjectPosition.x += _firstObjectHorizontalVelocity * deltaTime;
 
+	//Update the players z position.
+	_firstObjectPosition.z += _firstObjectHorizontalVelocityZ * deltaTime;
+
 	// Create a bounding box for the first object
 	BoundingBox firstObjectBox;
 	firstObjectBox.Center = _firstObjectPosition;
@@ -978,29 +1061,30 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 			}
 		}
 	}
+	//I should be able to remove these at somepoint if i look into it more.
 	//Used for enviroment mapping
 	if (_WorldMatrices.size() > 2) {
 		const XMMATRIX translationMatrix = XMMatrixTranslation(objectPositions[2 - 2].x + (- 10.0f), objectPositions[2 - 2].y + (- 5.0f), objectPositions[2 - 2].z);
 		_WorldMatrices[2] = translationMatrix * _WorldMatrices[2];
 	}
 
-	if (_WorldMatrices.size() > 3) {
-		const float moveDistance = sinf(t * 3) * 5.0f; // Move left and right with a sine wave
-		const XMMATRIX moveMatrix = XMMatrixTranslation(moveDistance, 0.0f, 0.0f);
-		_WorldMatrices[3] = moveMatrix * _WorldMatrices[3];
-	}
+	//if (_WorldMatrices.size() > 3) {
+	//	const float moveDistance = sinf(t * 3) * 5.0f; // Move left and right with a sine wave
+	//	const XMMATRIX moveMatrix = XMMatrixTranslation(moveDistance, 0.0f, 0.0f);
+	//	_WorldMatrices[3] = moveMatrix * _WorldMatrices[3];
+	//}
 
-	if (_WorldMatrices.size() > 4) {
-		const float moveDistance = sinf(t) * 8.0f; // Move left and right with a sine wave
-		const XMMATRIX moveMatrix = XMMatrixTranslation(moveDistance, 0.0f, 0.0f);
-		_WorldMatrices[4] = moveMatrix * _WorldMatrices[4];
-	}
+	//if (_WorldMatrices.size() > 4) {
+	//	const float moveDistance = sinf(t) * 8.0f; // Move left and right with a sine wave
+	//	const XMMATRIX moveMatrix = XMMatrixTranslation(moveDistance, 0.0f, 0.0f);
+	//	_WorldMatrices[4] = moveMatrix * _WorldMatrices[4];
+	//}
 
-	if (_WorldMatrices.size() > 5) {
-		const float moveDistance = sinf(t) * 5.0f; // Move up and down with a sine wave
-		const XMMATRIX moveMatrix = XMMatrixTranslation(0.0f, moveDistance, 0.0f);
-		_WorldMatrices[5] = moveMatrix * _WorldMatrices[5];
-	}
+	//if (_WorldMatrices.size() > 5) {
+	//	const float moveDistance = sinf(t) * 5.0f; // Move up and down with a sine wave
+	//	const XMMATRIX moveMatrix = XMMatrixTranslation(0.0f, moveDistance, 0.0f);
+	//	_WorldMatrices[5] = moveMatrix * _WorldMatrices[5];
+	//}
 	
 
 	_gravity = -9.8f; // Set the gravity value
@@ -1016,12 +1100,15 @@ void D3DFramework::render() {
 	// Calculate delta time
 	calculateDeltaTime();
 
+	//Process inputs?
+	//processMouseInput(_deltaTime);
 	// Update the world matrix for the moving object
 	updateWorldMatrix(_deltaTime);
 
 	// Update the light direction based on the current mode
 	updateLightDirection();
 
+	//When the sahders are set properly i will be able to fix these.
 	_pImmediateContext->ClearRenderTargetView(_pRenderTargetView, DirectX::Colors::MidnightBlue);
 	_pImmediateContext->ClearDepthStencilView(g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	// Set primitive topology
@@ -1128,6 +1215,7 @@ void D3DFramework::render() {
 	//ImGui::ShowDemoWindow(); // Show demo window! :)
 	//Leaving this in.
 
+	//For this i want to seperate it for simplicity and readability of the render function.
 	ImGui::Begin("Control Panel", &is_Window_Open, ImGuiWindowFlags_MenuBar);
 
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

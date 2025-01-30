@@ -137,6 +137,9 @@ public:
 
 	bool LoadConfig(const std::string& pathname);
 
+	void lockCursor();
+	void releaseCursor();
+
 	//HRESULT loadDDSTexture(const std::wstring& fileName, ID3D11ShaderResourceView** textureRV) const;
 
 
@@ -164,22 +167,38 @@ private:
 	XMFLOAT3 _firstObjectPosition;
 	float _firstObjectVerticalVelocity = 0.0f;
 	float _firstObjectHorizontalVelocity = 0.0f;
+	float _firstObjectHorizontalVelocityZ = 0.0f;
 	float _gravity = 0.0f; // Gravity constant
 	const float _jumpVelocity = 10.0f; // Initial jump velocity
 	const float _groundLevel = 0.0f; // Ground level
 	const float _moveSpeed = 5.0f; // Horizontal movement speed
+	const float _decelerationFactor = 0.95f; // Deceleration factor
 	float _zoomFactor = 1.0f; // Zoom factor for the camera
 	bool _isOnSurface = false;
 	bool _jumped = false;
 	XMFLOAT3 _firstObjectLookDirection = XMFLOAT3(0.0f, 0.0f, 1.0f); // Initial look direction
 
+	bool _decelerateLeft = false;
+	bool _decelerateForward = false;
+	bool _decelerateRight = false;
+	bool _decelerateBackward = false;
 
 	// Camera variables
 	XMFLOAT3 _cameraPosition = XMFLOAT3(0.0f, 1.0f, -5.0f); // Initial camera
 	bool _trackFirstObject = true; // Flag to indicate whether the camer
 	//XMFLOAT3 _originalCameraPosition = XMFLOAT3(0.0f, 1.0f, -5.0f); // Store the original camera position
-	bool _lookAboveObject = false; // Flag to indicate whether the camera should look above the object
-	bool _lookBelowObject = false; // Flag to indicate whether the camera should look below the object
+	//bool _lookAboveObject = false; // Flag to indicate whether the camera should look above the object
+	//bool _lookBelowObject = false; // Flag to indicate whether the camera should look below the object
+	// Camera control variables
+	float _cameraYaw = 0.0f;
+	float _cameraPitch = 0.0f;
+	bool _mouseCaptured = false;
+	POINT _lastMousePos;
+
+	// Add these methods
+	void processMouseInput(float deltaTime);
+	void processKeyboardInput(float deltaTime);
+
 
 	//GUI Buttons
 	bool spinnning = false;
