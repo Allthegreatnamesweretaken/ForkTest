@@ -16,8 +16,21 @@
 //Can be final but want scene changes first.
 
 /*Need to Do list:
+
+---Priority---
+- Need to work on redoing everything seperating it all into different files, this could help efficiency and make it easier to read, will also help with the fact that the code is getting very long.
+- Need to refine the shaders (if i am keeping them) as the way they are loaded and managed currently is not efficient.
+- File manager, for simplicity of being able to find parts of code easier, as in files for shaders etc etc.
+
+- Remember to Update the README everytime i push a new change.
+---Secondary---
+-FPS limiter, need to add one as i can hear my fans crying every time i run this. (Maybe find a way to load faster(Or it could be just how DX11 loads?))
+
 - Need to think more about how the game will work, while the baseline is okay need more idea on it like multiple guns? More maps? Enemines? and general feeling for the game.
--Add in a way to let the player have in air controls to make teh movement while falling feel smoother, can also change gravity if needed as it right now is strange.
+-- Am liking the idea of a bas parkour game for the beginning, can add multiple guns with a switch statment to change the way they fire,(And maybe their model) Enemies would be a long way off if not impossible because of the way the game is designed. 
+
+-- Have Implemented new movement as a way around, this movement is only controlled by the W key and the player moving the mouse the player loses controller of the W key while in air and has to reply on the launching to get to the end.
+- Add in a way to let the player have in air controls to make teh movement while falling feel smoother, can also change gravity if needed as it right now is strange.
 - change the wya the shaders are loaded should be able to be done in a loop.
 - Change the way they are added to an object should be able to do that inside of where we create the object.
 */
@@ -79,12 +92,11 @@ void D3DFramework::releaseCursor() {
 //--------------------------------------------------------------------------------------
 LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	const PAINTSTRUCT ps;
-	
 
 	extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 		return true;
-	// (Your code process Win32 messages)
+
 	auto& app = D3DFramework::getInstance();
 
 	const std::string msg;
@@ -101,34 +113,36 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 
 	case WM_MOUSEMOVE:
 		if (!app._mouseCaptured) {
-			// Get the current mouse position
 			POINT currentMousePos;
 			GetCursorPos(&currentMousePos);
 
-			// Calculate the mouse movement delta
 			float deltaX = static_cast<float>(currentMousePos.x - app._lastMousePos.x);
 			float deltaY = static_cast<float>(currentMousePos.y - app._lastMousePos.y);
 
-			// Update the camera yaw and pitch based on the mouse movement delta
 			app._cameraYaw += deltaX * 0.002f; // Adjust sensitivity as needed
 			app._cameraPitch += -deltaY * 0.002f;
 			app._cameraPitch = std::clamp(app._cameraPitch, -XM_PIDIV2, XM_PIDIV2); // Limit pitch to avoid flipping
 
-			// Recenter the cursor to the middle of the window
 			RECT rect;
 			GetClientRect(hWnd, &rect);
 			POINT center = { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 };
 			ClientToScreen(hWnd, &center);
 			SetCursorPos(center.x, center.y);
 
-			// Update the last mouse position to the center
 			app._lastMousePos = center;
 		}
 		break;
 
+	case WM_RBUTTONDOWN:
+	{
+		// Release the cursor to allow free movement
+		app.releaseCursor();
+		app._mouseCaptured = false;
+	}
+	break;
+
 	case WM_LBUTTONDOWN:
 	{
-		// Calculate the look direction based on yaw and pitch
 		XMVECTOR lookDirection = XMVector3Normalize(XMVectorSet(
 			cosf(app._cameraPitch) * sinf(app._cameraYaw),
 			sinf(app._cameraPitch),
@@ -136,7 +150,6 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 			0.0f
 		));
 
-		// Apply force in the opposite direction
 		app._firstObjectHorizontalVelocity = -XMVectorGetX(lookDirection) * 20;
 		app._firstObjectHorizontalVelocityZ = -XMVectorGetZ(lookDirection) * 20;
 		app._firstObjectVerticalVelocity = -XMVectorGetY(lookDirection) * 20;
@@ -146,35 +159,22 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 	case WM_KEYDOWN:
 	{
 		XMVECTOR lookDirection = XMVector3Normalize(XMVectorSet(
-			cosf(app._cameraPitch) * sinf(app._cameraYaw),
-			sinf(app._cameraPitch),
-			cosf(app._cameraPitch) * cosf(app._cameraYaw),
-			0.0f
-		));
-
-		XMVECTOR rightDirection = XMVector3Normalize(XMVectorSet(
-			sinf(app._cameraYaw - XM_PIDIV2),
+			sinf(app._cameraYaw),
 			0.0f,
-			cosf(app._cameraYaw - XM_PIDIV2),
+			cosf(app._cameraYaw),
 			0.0f
 		));
 
 		switch (wParam) {
 		case 'W':
-			app._firstObjectHorizontalVelocityZ = XMVectorGetZ(lookDirection) * app._moveSpeed;
-			app._firstObjectHorizontalVelocity = XMVectorGetX(lookDirection) * app._moveSpeed;
-			break;
-		case 'S':
-			app._firstObjectHorizontalVelocityZ = -XMVectorGetZ(lookDirection) * app._moveSpeed;
-			app._firstObjectHorizontalVelocity = -XMVectorGetX(lookDirection) * app._moveSpeed;
-			break;
-		case 'A':
-			app._firstObjectHorizontalVelocity = XMVectorGetX(rightDirection) * app._moveSpeed;
-			app._firstObjectHorizontalVelocityZ = XMVectorGetZ(rightDirection) * app._moveSpeed;
-			break;
-		case 'D':
-			app._firstObjectHorizontalVelocity = -XMVectorGetX(rightDirection) * app._moveSpeed;
-			app._firstObjectHorizontalVelocityZ = -XMVectorGetZ(rightDirection) * app._moveSpeed;
+			if (app._isOnSurface)
+			{
+			app.sprintFactor = app.sprintFactor + 0.01f;
+			app._firstObjectHorizontalVelocityZ = XMVectorGetZ(lookDirection) * (app._moveSpeed + app.sprintFactor);
+			app._firstObjectHorizontalVelocity = XMVectorGetX(lookDirection) * (app._moveSpeed + app.sprintFactor);
+			app._decelerateForward = false;
+			}
+			
 			break;
 		case VK_ESCAPE:
 			msg == "ESC pressed";
@@ -185,7 +185,6 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 			msg == "R pressed";
 			OutputDebugStringA("R pressed\n");
 			app.reset(); // Reset the application to its initial state
-			//This probably needs to be change as only resets character and not game as a whole.
 			break;
 		case 'T':
 			msg == "T pressed";
@@ -203,7 +202,6 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 			OutputDebugStringA("> pressed\n");
 			app.adjustTimeFactor(0.1f); // Increase the time factor
 			break;
-
 		case VK_OEM_PLUS: // '=' key
 			msg == "= pressed";
 			OutputDebugStringA("= pressed\n");
@@ -214,34 +212,18 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 			OutputDebugStringA("- pressed\n");
 			app.zoomOut(); // Zoom out
 			break;
-			
 		default:
 			break;
 		}
 		break;
+	}
 
 	case WM_KEYUP:
 		switch (wParam) {
-		case 'A':
-			if (app._firstObjectHorizontalVelocity > 0) {
-				app._firstObjectHorizontalVelocity = 0.0f; // Stop moving left
-			}
-		case 'W':
-			if (app._firstObjectHorizontalVelocityZ < 0) {
-				app._firstObjectHorizontalVelocityZ = 0.0f; // Stop moving left
-			}
-		case 'D':
-			if (app._firstObjectHorizontalVelocity < 0) {
-				app._firstObjectHorizontalVelocity = 0.0f; // Stop moving right
-			}
-		case 'S':
-			if (app._firstObjectHorizontalVelocityZ > 0) {
-				app._firstObjectHorizontalVelocityZ = 0.0f; // Stop moving left
-			}
-		
 		default:
 			break;
 		}
+		break;
 
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
@@ -249,7 +231,7 @@ LRESULT CALLBACK D3DFramework::wndProc(HWND hWnd, UINT message, WPARAM wParam, L
 
 	return 0;
 }
-}
+
 
 void D3DFramework::reset() {
 	// Reset the application to its initial state / This is not resetting the game as a whole, just the player.
@@ -294,18 +276,10 @@ void D3DFramework::adjustTimeFactor(float adjustment) {
 	// Adjust the time factor
 	_timeFactor = std::clamp(_timeFactor + adjustment, 0.1f, 10.0f);
 }
-//void D3DFramework::processMouseInput(float deltaTime) {
-//	if (_mouseCaptured) {
-//		// Calculate the new look direction
-//		XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(_cameraPitch, _cameraYaw, 0.0f);
-//		XMVECTOR lookDirection = XMVector3TransformCoord(XMLoadFloat3(&_firstObjectLookDirection), rotationMatrix);
-//		XMStoreFloat3(&_firstObjectLookDirection, lookDirection);
-//	}
-//}
 void D3DFramework::updateViewMatrix() {
 	// Calculate the look direction based on yaw and pitch
 	  // Offset the camera position relative to the player's position
-	XMFLOAT3 cameraOffset = XMFLOAT3(1.0f, 1.0f, 0.0f); // Adjust the offset as needed
+	XMFLOAT3 cameraOffset = XMFLOAT3(0.0f, 1.0f, -1.0f); // Adjust the offset as needed
 	XMVECTOR offset = XMLoadFloat3(&cameraOffset);
 	XMVECTOR playerPosition = XMLoadFloat3(&_firstObjectPosition);
 	XMVECTOR cameraPosition = XMVectorAdd(playerPosition, offset);
@@ -919,26 +893,26 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 	static float t = 0.0f;
 	t += deltaTime;
 
-	// Apply gravity to vertical velocity
 	_firstObjectVerticalVelocity += _gravity * deltaTime;
-
-	// Update the object's vertical position
 	_firstObjectPosition.y += _firstObjectVerticalVelocity * deltaTime;
 
-	// Update the object's horizontal position
 	_firstObjectPosition.x += _firstObjectHorizontalVelocity * deltaTime;
 
-	//Update the players z position.
+
 	_firstObjectPosition.z += _firstObjectHorizontalVelocityZ * deltaTime;
 
-	// Create a bounding box for the first object
+
+
+	XMMATRIX rotationMatrix = XMMatrixRotationY(-_cameraYaw);
+	XMMATRIX translationMatrix = XMMatrixTranslation(_firstObjectPosition.x, _firstObjectPosition.y, _firstObjectPosition.z);
+	_WorldMatrices[0] = rotationMatrix * translationMatrix;
+
 	BoundingBox firstObjectBox;
 	firstObjectBox.Center = _firstObjectPosition;
-	firstObjectBox.Extents = XMFLOAT3(1.0f, 1.0f, 1.0f); // Adjust the extents as needed
+	firstObjectBox.Extents = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	_isOnSurface = false;
 
-	// Check for collision with other objects
 	for (size_t i = 1; i < _models.size(); ++i) {
 		BoundingBox otherObjectBox;
 
@@ -946,12 +920,10 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 			continue;
 		}
 
-		// Decompose the world matrix to get the translation component
 		XMVECTOR scale, rotation, translation;
 		XMMatrixDecompose(&scale, &rotation, &translation, _WorldMatrices[i]);
 		XMStoreFloat3(&otherObjectBox.Center, translation);
 
-		// Calculate the bounding box extents
 		XMFLOAT3 minPoint(FLT_MAX, FLT_MAX, FLT_MAX);
 		XMFLOAT3 maxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
@@ -967,37 +939,32 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 
 		otherObjectBox.Extents = XMFLOAT3(
 			(maxPoint.x - minPoint.x) / 2.0f,
-			(maxPoint.y - minPoint.y),// / 1.5f,
+			(maxPoint.y - minPoint.y),
 			(maxPoint.z - minPoint.z) / 2.0f
 		);
 
-		// Correct the center of the bounding box
 		otherObjectBox.Center = XMFLOAT3(
 			(maxPoint.x + minPoint.x) / 2.0f,
 			(maxPoint.y + minPoint.y) / 2.0f,
 			(maxPoint.z + minPoint.z) / 2.0f
 		);
 
-		// Transform the bounding box using the world matrix
 		BoundingBox transformedBox;
 		otherObjectBox.Transform(transformedBox, _WorldMatrices[i]);
 
 		if (firstObjectBox.Intersects(transformedBox)) {
-			// Check if the first object is above the other object and within its horizontal bounds
 			if (_firstObjectPosition.y > transformedBox.Center.y + transformedBox.Extents.y &&
 				_firstObjectPosition.x + firstObjectBox.Extents.x > transformedBox.Center.x - transformedBox.Extents.x &&
 				_firstObjectPosition.x - firstObjectBox.Extents.x < transformedBox.Center.x + transformedBox.Extents.x) {
-				// Collision detected, adjust the first object's position
 				const float targetY = transformedBox.Center.y + transformedBox.Extents.y;
 				if (_firstObjectPosition.y - targetY < 0.1f) {
 					if (_firstObjectVerticalVelocity < 0) {
-						_firstObjectVerticalVelocity = 0.0f; // Stop falling
+						_firstObjectVerticalVelocity = 0.0f;
 					}
 				}
 				_isOnSurface = true;
 			}
 			else {
-				// Check for collisions on the x-axis only if within vertical bounds
 				if (_firstObjectPosition.y > transformedBox.Center.y - transformedBox.Extents.y &&
 					_firstObjectPosition.y < transformedBox.Center.y + transformedBox.Extents.y) {
 					if (_firstObjectPosition.x < transformedBox.Center.x - transformedBox.Extents.x) {
@@ -1008,15 +975,12 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 					}
 				}
 
-				// Allow vertical movement if within horizontal range
 				if (abs(_firstObjectPosition.x - transformedBox.Center.x) <= transformedBox.Extents.x) {
-					// Check if the first object is moving downwards
 					if (_firstObjectVerticalVelocity < 0) {
-						// Collision detected, adjust the first object's position
 						const float targetY = transformedBox.Center.y + transformedBox.Extents.y;
 						if (_firstObjectPosition.y - targetY < 0.1f) {
 							_firstObjectPosition.y = targetY;
-							_firstObjectVerticalVelocity = 0.0f; // Stop falling
+							_firstObjectVerticalVelocity = 0.0f;
 						}
 						_isOnSurface = true;
 					}
@@ -1024,32 +988,10 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 			}
 		}
 	}
-	//Allows the player to rotate the way they are moving / look vector management.
-	float rotationAngle = 0.0f;
-	if (_firstObjectLookDirection.x < 0) {
-		rotationAngle = XM_PI; // Rotate 180 degrees to look left
-	}
-	// Create the rotation matrix
-	const XMMATRIX rotationMatrixP = XMMatrixRotationY(rotationAngle);
-
-
-	// Move the first object along the x-axis
-	if (!_WorldMatrices.empty()) {
-		const XMMATRIX rotationMatrix = XMMatrixRotationY(t); // Rotate around Y-axis
-		const XMMATRIX translationMatrix = XMMatrixTranslation(_firstObjectPosition.x, _firstObjectPosition.y, _firstObjectPosition.z);
-
-		if (spinnning == true) {
-			_WorldMatrices[0] = rotationMatrixP * translationMatrix * rotationMatrix;
-		}
-		else {
-			_WorldMatrices[0] = rotationMatrixP * translationMatrix ;
-		}
-	}
 
 	for (size_t i = 2; i < _WorldMatrices.size(); ++i) {
 		if (i < objectPositions.size() + 2) {
 			const XMMATRIX translationMatrix = XMMatrixTranslation(objectPositions[i - 2].x, objectPositions[i - 2].y, objectPositions[i - 2].z);
-			
 			const XMMATRIX rotationMatrix = XMMatrixRotationY(t);
 
 			if (spinnning == true) {
@@ -1057,41 +999,20 @@ void D3DFramework::updateWorldMatrix(float deltaTime) {
 			}
 			else {
 				_WorldMatrices[i] = translationMatrix;
-				
 			}
 		}
 	}
-	//I should be able to remove these at somepoint if i look into it more.
-	//Used for enviroment mapping
+
 	if (_WorldMatrices.size() > 2) {
-		const XMMATRIX translationMatrix = XMMatrixTranslation(objectPositions[2 - 2].x + (- 10.0f), objectPositions[2 - 2].y + (- 5.0f), objectPositions[2 - 2].z);
+		const XMMATRIX translationMatrix = XMMatrixTranslation(objectPositions[2 - 2].x + (-10.0f), objectPositions[2 - 2].y + (-5.0f), objectPositions[2 - 2].z);
 		_WorldMatrices[2] = translationMatrix * _WorldMatrices[2];
 	}
 
-	//if (_WorldMatrices.size() > 3) {
-	//	const float moveDistance = sinf(t * 3) * 5.0f; // Move left and right with a sine wave
-	//	const XMMATRIX moveMatrix = XMMatrixTranslation(moveDistance, 0.0f, 0.0f);
-	//	_WorldMatrices[3] = moveMatrix * _WorldMatrices[3];
-	//}
+	_gravity = -9.8f;
 
-	//if (_WorldMatrices.size() > 4) {
-	//	const float moveDistance = sinf(t) * 8.0f; // Move left and right with a sine wave
-	//	const XMMATRIX moveMatrix = XMMatrixTranslation(moveDistance, 0.0f, 0.0f);
-	//	_WorldMatrices[4] = moveMatrix * _WorldMatrices[4];
-	//}
-
-	//if (_WorldMatrices.size() > 5) {
-	//	const float moveDistance = sinf(t) * 5.0f; // Move up and down with a sine wave
-	//	const XMMATRIX moveMatrix = XMMatrixTranslation(0.0f, moveDistance, 0.0f);
-	//	_WorldMatrices[5] = moveMatrix * _WorldMatrices[5];
-	//}
-	
-
-	_gravity = -9.8f; // Set the gravity value
-
-	// Update the view matrix to track the first object
 	updateViewMatrix();
 }
+
 
 //--------------------------------------------------------------------------------------
 // Render a frame
@@ -1249,7 +1170,8 @@ void D3DFramework::render() {
 		if (ImGui::BeginTabItem("Debug Info")) {
 			ImGui::Text("Player Position: (%.2f, %.2f, %.2f)", _firstObjectPosition.x, _firstObjectPosition.y, _firstObjectPosition.z);
 			ImGui::Text("Player Velocity: (%.2f, %.2f)", _firstObjectHorizontalVelocity, _firstObjectVerticalVelocity);
-			ImGui::Text("Player Look Direction: (%.2f, %.2f, %.2f)", _firstObjectLookDirection.x, _firstObjectLookDirection.y, _firstObjectLookDirection.z);
+			//ImGui::Text("Player Look Direction: (%.2f, %.2f, %.2f)", _firstObjectLookDirection.x, _firstObjectLookDirection.y, _firstObjectLookDirection.z);
+			ImGui::Text("Sprint Factor: %.2f", sprintFactor); // Add this line to show the current sprint factor
 
 			ImGui::Separator();
 			ImGui::Text("Object Positions:");

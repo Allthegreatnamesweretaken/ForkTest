@@ -172,11 +172,12 @@ private:
 	const float _jumpVelocity = 10.0f; // Initial jump velocity
 	const float _groundLevel = 0.0f; // Ground level
 	const float _moveSpeed = 5.0f; // Horizontal movement speed
+	float sprintFactor = 0.0f;
 	const float _decelerationFactor = 0.95f; // Deceleration factor
 	float _zoomFactor = 1.0f; // Zoom factor for the camera
 	bool _isOnSurface = false;
 	bool _jumped = false;
-	XMFLOAT3 _firstObjectLookDirection = XMFLOAT3(0.0f, 0.0f, 1.0f); // Initial look direction
+//	XMFLOAT3 _firstObjectLookDirection = XMFLOAT3(0.0f, 0.0f, 0.0f); // Initial look direction
 
 	bool _decelerateLeft = false;
 	bool _decelerateForward = false;
@@ -184,7 +185,7 @@ private:
 	bool _decelerateBackward = false;
 
 	// Camera variables
-	XMFLOAT3 _cameraPosition = XMFLOAT3(0.0f, 1.0f, -5.0f); // Initial camera
+	XMFLOAT3 _cameraPosition = XMFLOAT3(0.0f, 0.0f, 0.0f); // Initial camera / Redundant Value.
 	bool _trackFirstObject = true; // Flag to indicate whether the camer
 	//XMFLOAT3 _originalCameraPosition = XMFLOAT3(0.0f, 1.0f, -5.0f); // Store the original camera position
 	//bool _lookAboveObject = false; // Flag to indicate whether the camera should look above the object
@@ -198,6 +199,10 @@ private:
 	// Add these methods
 	void processMouseInput(float deltaTime);
 	void processKeyboardInput(float deltaTime);
+
+	//Speed crap
+	float _acceleration = 10.0f; // Acceleration rate
+	float _deceleration = 4.0f;  // Deceleration rate
 
 
 	//GUI Buttons

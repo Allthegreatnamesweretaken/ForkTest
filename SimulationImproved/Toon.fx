@@ -53,7 +53,7 @@ float4 PS(PS_INPUT input) : SV_TARGET
     float quantizedNdotL = floor(NdotL * 4.0f) / 4.0f;
     float3 color = materialAmb.rgb + quantizedNdotL * lightColor.rgb;
 
-    float edgeThreshold = 0.5f;
+    float edgeThreshold = 0.5f; //why the cube is black.
     float3 viewDir = normalize(EyePos - input.WorldPos);
     float NdotV = dot(normal, viewDir);
     if (NdotV < edgeThreshold)
