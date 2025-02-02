@@ -1,4 +1,4 @@
-Recent Update: Redid movement (not finished) and way the player is handeled, will be refined after actually organising my code.
+Recent Update: Moved All code into different fies main code went from 1200 -> 114 lines made it way more readable, will look into making it more efficient if needed / the .h files but this okay for now. 
 
 Need to Do list:
 

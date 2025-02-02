@@ -38,6 +38,11 @@
     <ClCompile Include="ModelLoader.h" />
     <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="D3DFramework_Init.cpp" />
+    <ClCompile Include="D3DFramework_Render.cpp" />
+    <ClCompile Include="D3DFramework_Input.cpp" />
+    <ClCompile Include="D3DFramework_Utils.cpp" />
+    <ClCompile Include="D3DFramework_Lighting.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D3DFramework.h" />

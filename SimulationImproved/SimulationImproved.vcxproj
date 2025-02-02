@@ -189,6 +189,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D3DFramework.cpp" />
+    <ClCompile Include="D3DFramework_Init.cpp" />
+    <ClCompile Include="D3DFramework_Input.cpp" />
+    <ClCompile Include="D3DFramework_Lighting.cpp" />
+    <ClCompile Include="D3DFramework_Render.cpp" />
+    <ClCompile Include="D3DFramework_Utils.cpp" />
     <ClCompile Include="DDSTextureLoader.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
